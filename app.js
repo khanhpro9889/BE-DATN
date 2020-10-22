@@ -21,10 +21,32 @@ mongoClient
 const app = express();
 
 const authRoute = require("./routes/auth");
+const userRoute = require("./routes/user");
+const conversationRoute = require("./routes/conversation");
+const messageRoute = require("./routes/message");
+const uploadRoute = require('./routes/uploads-text-editor');
+const districtRoute = require('./routes/district');
+const provinceRoute = require('./routes/province');
+const postRoute = require('.//routes/gym');
+const categoryRoute = require('./routes/category');
+const utilityRoute = require('./routes/utility');
+const saveRoute = require('./routes/save');
+
+// Start the server
+const port = app.get("port") || 3001;
+const server = app.listen(port, () => console.log(`Server is listening on port ${port}`));
+const io = require('socket.io').listen(server);
+app.disable('etag');
+app.use(function(req, res, next) {
+  req.io = io;
+  next();
+});
 
 // Middlewares
 app.use(logger("dev"));
 app.use(bodyParser.json());
+
+app.use("/uploads", express.static('uploads'))
 
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
@@ -42,6 +64,17 @@ app.use((req, res, next) => {
 // Routes
 //app.use("/users", userRoute);
 app.use("/auth", authRoute);
+app.use("/users", userRoute);
+app.use("/conversations", conversationRoute);
+app.use("/messages", messageRoute);
+app.use("/upload-text-editor", uploadRoute);
+app.use("/districts", districtRoute);
+app.use("/provinces", provinceRoute);
+app.use("/gym", postRoute);
+app.use("/category", categoryRoute);
+app.use("/utility", utilityRoute);
+app.use("/saves", saveRoute);
+
 // Routes
 app.get("/", (req, res, next) => {
   return res.status(200).json({
@@ -69,6 +102,5 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start the server
-const port = app.get("port") || 3001;
-app.listen(port, () => console.log(`Server is listening on port ${port}`));
+
+

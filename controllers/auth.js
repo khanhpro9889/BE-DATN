@@ -51,8 +51,7 @@ exports.ResendEmail = async (req, res, next) => {
 
 exports.signUp = async (req, res, next) => {
   const user = await User.find({ email: req.body.email });
-  const filtered = user.filter(u => u.password != null);
-  if (filtered.length >= 1) {
+  if (user.length >= 1) {
     return res.status(201).json({
       message: "Email exists",
     });
@@ -125,11 +124,11 @@ exports.login = async (req, res, next) => {
           if (filtered[0].isVerified) {
             const token = jwt.sign(
               {
-                uid: filtered[0]._id,
+                userId: filtered[0]._id,
               },
               process.env.JWT_KEY || "Secrect",
               {
-                expiresIn: "1h",
+                expiresIn: "24h",
               }
             );
             return res.status(200).json({
@@ -202,7 +201,6 @@ exports.SocialLogin = async (req, res, next) => {
       provider_name: socialType
     })
     if (!social) { 
-      console.log("G");
       // This social email account is not associate with any emails yet.
       const newUser = new User();
       newUser._id = new mongoose.Types.ObjectId();
@@ -212,7 +210,6 @@ exports.SocialLogin = async (req, res, next) => {
       newUser.isVerified = true;
       newUser.createdAt = new Date();
       await newUser.save();
-      console.log("B");
       console.log(newUser);
       const newSocial = new Social({
         _id: new mongoose.Types.ObjectId(),
@@ -220,7 +217,6 @@ exports.SocialLogin = async (req, res, next) => {
         provider_name: socialType,
         createdAt: new Date()
       });
-      console.log("C");
       await newSocial.save();
       await User.updateOne(
         { _id: newUser._id },
@@ -232,7 +228,7 @@ exports.SocialLogin = async (req, res, next) => {
         },
         process.env.JWT_KEY || "Secrect",
         {
-          expiresIn: "1h",
+          expiresIn: '24h',
         }
       );
       return res.status(200).json({
@@ -240,7 +236,6 @@ exports.SocialLogin = async (req, res, next) => {
         token: token,
       });
     } else {
-      console.log("F");
       const user = await User.findOne({social: social._id});
       console.log(user);
       const token = jwt.sign(
@@ -249,7 +244,7 @@ exports.SocialLogin = async (req, res, next) => {
         },
         process.env.JWT_KEY || "Secrect",
         {
-          expiresIn: "1h",
+          expiresIn: '24h',
         }
       );
       

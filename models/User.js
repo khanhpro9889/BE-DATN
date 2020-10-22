@@ -19,9 +19,28 @@ const UserSchema = new Schema({
     type: Boolean,
     default: null
   },
+  phone: {
+    type: String,
+    default: null
+  },
+  isHidden: {
+    type: Boolean
+  },
   profileImg: {
     type: String,
     default: "images/avatar.npg"
+  },
+  work: {
+    type: String,
+    default: null
+  },
+  about: {
+    type: String,
+    default: null
+  },
+  city: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Province'
   },
   reset: {
     type: mongoose.Schema.Types.ObjectId,
