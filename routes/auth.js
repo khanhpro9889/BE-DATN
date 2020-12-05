@@ -3,7 +3,7 @@ const router = express.Router()
 const AuthController = require('../controllers/auth')
 
 router.post('/social-login', AuthController.SocialLogin);
-router.get('/verify', AuthController.verifyEmail);
+router.post('/verify', AuthController.verifyEmail);
 router.post('/register', AuthController.signUp);
 router.post('/resend-email', AuthController.ResendEmail);
 router.post('/login', AuthController.login);

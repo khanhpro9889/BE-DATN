@@ -1,13 +1,29 @@
 const Save = require('../models/Save');
 const mongoose = require("mongoose");
 const Gym = require('../models/Gym');
+const District = require("../models/District");
+const Review = require("../models/Review");
+const Province = require('../models/Province');
 
 exports.getSavesByUser = async (req, res, next) => {
     const { id } = req.params;
     try {
         const saves = await Save.find({user: id})
-        .populate({ path: 'gym', model: Gym});
-        res.status(200).json({saves: saves});
+        .populate({ path: 'gym', model: Gym})
+        .populate({ path: 'gym', populate: { path: 'addresses.district', model: District}})
+        .populate({ path: 'gym', populate: { path: 'addresses.province', model: Province}});
+        const reviews = [];
+        for (const s of saves) {
+            const r = await Review.find({gym: s.gym._id});
+            reviews.push(r);
+        }
+        const newSaves = saves.map((item, index) => {
+            return {
+                ...item,
+                reviews: reviews[index]
+            }
+        })
+        res.status(200).json({saves: newSaves});
     } catch (error) {
         res.status(500).json(err);
     }

@@ -8,7 +8,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 const mail = require('../configs/mail');
-const { token } = require('morgan');
+const { request } = require('express');
 
 const mailOptions = (to, content) => {
   return {
@@ -26,7 +26,7 @@ exports.ResendEmail = async (req, res, next) => {
     const newToken = randomToken(12);
     await Token.updateOne({uid: id, type: 'register'}, {token: newToken, createAt: new Date()});
     //send mail confirm
-    const content = `Please click link: http://localhost:3001/auth/verify?id=${user._id}&token=${newToken}&type=create}} to verify account
+    const content = `Please click link: http://localhost:3000/verify?id=${user._id}&token=${newToken}&type=create}} to verify account
       In 15 minutes.
     `;
     const mailOtp = mailOptions(user.email, content);
@@ -69,8 +69,8 @@ exports.signUp = async (req, res, next) => {
           password: hash,
           email: req.body.email,
           isVerified: false,
-          created_at: new Date(),
-          updated_at: null,
+          createAt: new Date(),
+          updateAt: null,
         });
         await newUser.save()
         const token = randomToken(12);
@@ -84,7 +84,7 @@ exports.signUp = async (req, res, next) => {
         await newToken.save();
 
         //send mail confirm
-        const content = `Please click link: http://localhost:3001/auth/verify?id=${newUser._id}&token=${newToken.token}&type=create}} to verify account
+        const content = `Please click link: http://localhost:3000/verify?id=${newUser._id}&token=${newToken.token}&type=create}} to verify account
           In 15 minutes.
         `;
         const mailOtp = mailOptions(req.body.email, content);
@@ -108,7 +108,6 @@ exports.signUp = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   const user = await User.find({ email: req.body.email });
-  console.log(user);
   const filtered = user.filter(u => u.password != null);
   if(filtered) {
     bcrypt.compare(
@@ -160,31 +159,27 @@ function addMinutes(date, minutes) {
 }
 
 exports.verifyEmail = async (req, res, next) => {
-  const { type, id, token } = req.query;
-  console.log(token);
+  const { type, id, token } = req.body;
   try {
-    if (type === 'create') {
+    if (type === 'create' && !!id && !!token) {
       const findedToken = await Token.find({token: token, uid: id, type: 'register'});
-      console.log(findedToken);
       if (findedToken) {
         const now = new Date();
         const newCreateAt = addMinutes(findedToken[0].createAt, 15);
-        console.log("a")
-        console.log("AA" + now);
-        console.log("BBB" + newCreateAt);
         if (now.getTime() <= newCreateAt.getTime()) {
             await User.updateOne(
               { _id: findedToken[0].uid },
               { isVerified: true }
             )
-            res.status(200).json({message: "verify successfully"});
+            return res.status(200).json({message: "verify successfully"});
         } else {
-          res.status(500).json({message: "time's up"});
+          return res.status(500).json({message: "time's up", uid: findedToken[0].uid});
         }
       } else {
-        res.status(500).json({message: "No id"});
+        return res.status(500).json({message: "No id"});
       }
     }
+    return res.status(500).json({message: "No id"});
   } catch (err) {
     console.log(err);
     res.status(500).json(err);
@@ -192,7 +187,6 @@ exports.verifyEmail = async (req, res, next) => {
 }
 
 exports.SocialLogin = async (req, res, next) => {
-  console.log(req.body);
   var requestData = req.body;
   let socialType = requestData.socialType;
   try {
@@ -200,7 +194,11 @@ exports.SocialLogin = async (req, res, next) => {
       provider_uid: requestData.id,
       provider_name: socialType
     })
-    if (!social) { 
+    if (!social) {
+      const user = await User.find({email: requestData.email});
+      if (user.length > 0) {
+        return res.status(200).json({message: 'Email exists'});
+      }
       // This social email account is not associate with any emails yet.
       const newUser = new User();
       newUser._id = new mongoose.Types.ObjectId();
@@ -208,14 +206,13 @@ exports.SocialLogin = async (req, res, next) => {
       newUser.email = requestData.email || null;
       newUser.profileImg = requestData.profileImg;
       newUser.isVerified = true;
-      newUser.createdAt = new Date();
+      newUser.createAt = new Date();
       await newUser.save();
-      console.log(newUser);
       const newSocial = new Social({
         _id: new mongoose.Types.ObjectId(),
         provider_uid: requestData.id,
         provider_name: socialType,
-        createdAt: new Date()
+        createAt: new Date()
       });
       await newSocial.save();
       await User.updateOne(
@@ -237,7 +234,6 @@ exports.SocialLogin = async (req, res, next) => {
       });
     } else {
       const user = await User.findOne({social: social._id});
-      console.log(user);
       const token = jwt.sign(
         {
           userId: user._id,
@@ -261,20 +257,24 @@ exports.SocialLogin = async (req, res, next) => {
 
 exports.reset = async (req, res, next) => {
   const { email } = req.body;
-  console.log(email);
   try {
     const user = await User.find({ email: email});
     const filtered = user.filter(u => u.password !== null);
     const token = randomToken(12);
-    const newToken = new Token({
-      _id: new mongoose.Types.ObjectId(),
-      token: token,
-      uid: filtered[0]._id,
-      type: 'reset',
-      createAt: new Date()
-    })
-    await newToken.save();
-    const content = `Please click link: http://localhost:3000/reset-2nd?token=${newToken.token}&uid=${filtered[0]._id}}} to start reset password in 15 minutes`;
+    const findedToken = await Token.find({uid: filtered[0]._id, type: 'reset'});
+    if (findedToken[0]) {
+      await Token.updateOne({_id: findedToken[0]._id}, {token: token, createAt: new Date()});
+    } else {
+      const newToken = new Token({
+        _id: new mongoose.Types.ObjectId(),
+        token: token,
+        uid: filtered[0]._id,
+        type: 'reset',
+        createAt: new Date()
+      })
+      await newToken.save();
+    }
+    const content = `Please click link: http://localhost:3000/reset-2nd?token=${token}&uid=${filtered[0]._id}}} to start reset password in 15 minutes`;
     const mailOtp = mailOptions(email, content);
     mail.sendMail(mailOtp, (err, info) => {
       if(err) {
@@ -289,31 +289,34 @@ exports.reset = async (req, res, next) => {
       }
     });
   } catch (err) {
-    console.log(error)
-    return res.status(500).send(error)
+    console.log(err)
+    return res.status(500).send(err)
   }
 }
 
 exports.reset2nd = async (req, res, next) => {
   const {id, password, token} = req.body;
-  const findedToken = await Token.find({token: token, uid: id});
+  const findedToken = await Token.find({token: token, uid: id, type: 'reset'});
   const now = new Date();
-  if(now.getTime() < addMinutes(findedToken[0].createAt, 15)) {
-    bcrypt.hash(password, 10, async (err, hash) => {
-      if (err) {
-        return res.status(500).json({
-          error: err,
-        });
-      } else {
-        await User.updateOne(
-          { _id: findedToken[0].uid },
-          { password: hash, updateAt: new Date() }
-        )
-        return res.status(200).json({message: 'Reset passwords successfuly'});
-      }
-    });
+  if (findedToken[0]) {
+    if(now.getTime() < addMinutes(findedToken[0].createAt, 15)) {
+      bcrypt.hash(password, 10, async (err, hash) => {
+        if (err) {
+          return res.status(500).json({
+            error: err,
+          });
+        } else {
+          await User.updateOne(
+            { _id: findedToken[0].uid },
+            { password: hash, updateAt: new Date() }
+          )
+          return res.status(200).json({message: 'Reset passwords successfuly'});
+        }
+      });
+    } else {
+      return res.status(201).json({message: 'Expired'});
+    }
   } else {
-    return res.status(201).json({message: 'Expired'});
+    return res.status(201).json({message: 'Fail'});
   }
-  
 }

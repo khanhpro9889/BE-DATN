@@ -59,3 +59,27 @@ exports.districts_get_by_province = async (req, res, next) => {
       });
     });
 };
+
+exports.getDistrictByCode = async (req, res, next) => {
+  District.find({ parent_code: req.params.code })
+    .select("_id parent_code code name name_with_type")
+    .exec()
+    .then((district) => {
+      if (district.length == 0) {
+        return res.status(404).json({
+          success: false,
+          message: "District not found",
+        });
+      }
+      res.status(200).json({
+        success: true,
+        districts: district,
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        success: false,
+        error: err,
+      });
+    });
+};

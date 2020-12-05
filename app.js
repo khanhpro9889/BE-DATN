@@ -31,6 +31,10 @@ const postRoute = require('.//routes/gym');
 const categoryRoute = require('./routes/category');
 const utilityRoute = require('./routes/utility');
 const saveRoute = require('./routes/save');
+const reviewRoute = require('./routes/review');
+const replyRoute = require('./routes/reply');
+const boxMessageRoute = require('./routes/box-message');
+const notificationRoute = require('./routes/notification');
 
 // Start the server
 const port = app.get("port") || 3001;
@@ -74,6 +78,10 @@ app.use("/gym", postRoute);
 app.use("/category", categoryRoute);
 app.use("/utility", utilityRoute);
 app.use("/saves", saveRoute);
+app.use("/reviews", reviewRoute);
+app.use("/replies", replyRoute);
+app.use("/box-message", boxMessageRoute);
+app.use("/notifications", notificationRoute);
 
 // Routes
 app.get("/", (req, res, next) => {

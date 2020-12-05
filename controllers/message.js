@@ -3,6 +3,7 @@ const Message = require('../models/Message');
 const User = require('../models/User');
 //req.io.sockets.emit('messages', req.body.body);
 const mongoose = require('mongoose');
+const BoxMessage = require('../models/BoxMessage');
 
 exports.getMessageByConversation = async (req, res, next) => {
     const { conversationId } = req.params;
@@ -41,6 +42,33 @@ exports.addMessage = async (req, res, next) => {
         image,
         createAt: new Date()
     })
+    const bms = await BoxMessage.find({gym: conversation.gym});
+    var answer = null;
+    for (b of bms) {
+        if (b.question.toUpperCase() === body.toUpperCase()) {
+            answer = b.answer;
+            break;
+        }
+    }
+    if (answer) {
+        const newMessage = new Message({
+            _id: new mongoose.Types.ObjectId(),
+            conversation: conversationId,
+            sender: receiver,
+            receiver: sender,
+            body: answer,
+            image: null,
+            createAt: new Date()
+        })
+        try {
+            await newMessage.save();
+            req.io.sockets.emit(`messages ${conversationId}`, conversationId);
+            req.io.sockets.emit(`conversations ${sender}`, conversationId);
+            req.io.sockets.emit(`conversations ${receiver}`, conversationId);
+        } catch (error) {
+            console.log(error)
+        }
+    }
     try {
         await newMessage.save();
         req.io.sockets.emit(`messages ${conversationId}`, conversationId);

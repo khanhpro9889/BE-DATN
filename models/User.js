@@ -23,12 +23,9 @@ const UserSchema = new Schema({
     type: String,
     default: null
   },
-  isHidden: {
-    type: Boolean
-  },
   profileImg: {
     type: String,
-    default: "images/avatar.npg"
+    default: null
   },
   work: {
     type: String,
@@ -42,10 +39,9 @@ const UserSchema = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Province'
   },
-  reset: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Token',
-    default: null
+  role: {
+    type: String,
+    default: 'user'
   },
   social: {
     type: mongoose.Schema.Types.ObjectId, 
@@ -53,7 +49,8 @@ const UserSchema = new Schema({
     default: null
   },
   createAt: {
-    type: Date
+    type: Date,
+    default: new Date()
   },
   updateAt: {
     type: Date,
