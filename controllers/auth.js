@@ -108,11 +108,10 @@ exports.signUp = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   const user = await User.find({ email: req.body.email });
-  const filtered = user.filter(u => u.password != null);
-  if(filtered) {
+  if(user.length > 0) {
     bcrypt.compare(
       req.body.password,
-      filtered[0].password,
+      user[0].password,
       (err, result) => {
         if (err) {       
           return res.status(201).json({
@@ -120,10 +119,10 @@ exports.login = async (req, res, next) => {
           });
         }
         if (result) {
-          if (filtered[0].isVerified) {
+          if (user[0].isVerified) {
             const token = jwt.sign(
               {
-                userId: filtered[0]._id,
+                userId: user[0]._id,
               },
               process.env.JWT_KEY || "Secrect",
               {
@@ -136,7 +135,7 @@ exports.login = async (req, res, next) => {
             });
           } else {
             return res.status(201).json({
-              uid: filtered[0]._id,
+              uid: user[0]._id,
               message: "Tài khoản chưa được xác nhận",
             });
           }
